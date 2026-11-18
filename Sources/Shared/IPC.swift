@@ -19,6 +19,12 @@ public enum IPC {
         return d
     }()
 
+    #if os(Linux)
+    public static let streamType = Int32(SOCK_STREAM.rawValue)
+    #else
+    public static let streamType = SOCK_STREAM
+    #endif
+
     static func makeAddr(_ path: String) -> sockaddr_un {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -67,7 +73,7 @@ public enum IPC {
 
     /// Синхронный запрос к службе. Вызывать не с главного потока.
     public static func send(_ req: Request, path: String = Paths.socket) throws -> Response {
-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        let fd = socket(AF_UNIX, IPC.streamType, 0)
         guard fd >= 0 else { throw ClientError.connect }
         defer { close(fd) }
         setTimeout(fd, seconds: 3)
