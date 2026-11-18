@@ -14,5 +14,6 @@
 	<key>LSUIElement</key><true/>
 	<key>NSHighResolutionCapable</key><true/>
 	<key>ATSApplicationFontsPath</key><string>Fonts</string>
+	<key>NSAppleEventsUsageDescription</key><string>Чтобы закрывать сайты с сериалами в открытых вкладках браузера, пока есть срочные задачи.</string>
 </dict>
 </plist>

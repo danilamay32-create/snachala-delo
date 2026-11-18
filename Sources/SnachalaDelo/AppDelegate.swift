@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastAlert: [String: Date] = [:]
 
     private var mainWindow: NSWindow?
+    private let tabGuard = TabGuard()
+    private var guardTimer: Timer?
     static let showNote = Notification.Name("ru.snachaladelo.show")
 
     func applicationDidFinishLaunching(_ note: Notification) {
@@ -38,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(rootView: PopoverView(
             model: model,
             openSettings: { [weak self] in self?.openSettings() },
-            quit: { NSApp.terminate(nil) }
+            quit: { [weak self] in self?.hideIcon() }
         ))
 
         model.objectWillChange
@@ -50,6 +52,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(appLaunched(_:)),
             name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+
+        // Сторож вкладок: запрещённые сайты в браузере сменяются страницей «Сначала дело».
+        tabGuard.onDenied = { [weak self] browser in
+            self?.model.error = "Разреши «Сначала дело» управлять браузером \(browser): Системные настройки → Конфиденциальность и безопасность → Автоматизация. Без этого зеркала сайтов через VPN не закрываются."
+        }
+        guardTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            guard let self = self, let s = self.model.snapshot else { return }
+            self.tabGuard.check(s)
+        }
 
         // Для скриншотов в CI.
         let args = CommandLine.arguments
@@ -73,13 +84,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         openMainWindow()
     }
 
+    /// «Скрыть значок»: приложение и проверка вкладок продолжают работать.
+    @objc func hideIcon() {
+        popover.performClose(nil)
+        mainWindow?.orderOut(nil)
+        statusItem?.isVisible = false
+    }
+
     func openMainWindow() {
+        statusItem?.isVisible = true
         popover.performClose(nil)
         if mainWindow == nil {
             let w = NSWindow(contentViewController: NSHostingController(rootView: PopoverView(
                 model: model,
                 openSettings: { [weak self] in self?.openSettings() },
-                quit: { NSApp.terminate(nil) }
+                quit: { [weak self] in self?.hideIcon() }
             )))
             w.title = "Сначала дело"
             w.backgroundColor = NSColor(Theme.surface)
@@ -177,7 +196,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let main = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Скрыть значок", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let hide = appMenu.addItem(withTitle: "Скрыть значок", action: #selector(hideIcon), keyEquivalent: "q")
+        hide.target = self
         appItem.submenu = appMenu
         main.addItem(appItem)
 

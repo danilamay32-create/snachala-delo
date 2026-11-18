@@ -3,6 +3,10 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 PKG=$(ls build/*.pkg | head -1)
+# Тест рассчитан на чистый Мак: старую установку (и её задачи) убрать.
+if [ -e /Library/PrivilegedHelperTools/ru.snachaladelo.daemon ]; then
+  echo "Найдена прошлая установка — удаляю перед тестом"; sh scripts/uninstall.sh
+fi
 installer -pkg "$PKG" -target / || exit 1
 sleep 5
 launchctl print system/ru.snachaladelo.daemon | head -20
@@ -27,6 +31,7 @@ mkdir -p build/shots
 U=$(stat -f %u /dev/console)
 if [ "$U" != "0" ]; then
   APPBIN="/Applications/Сначала дело.app/Contents/MacOS/SnachalaDelo"
+  launchctl bootout "gui/$U/ru.snachaladelo.app" 2>/dev/null
   pkill -x SnachalaDelo; sleep 1
   launchctl asuser "$U" sudo -u "#$U" "$APPBIN" --open-window >/dev/null 2>&1 &
   sleep 6

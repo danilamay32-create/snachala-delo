@@ -32,6 +32,7 @@ GF=https://github.com/google/fonts/raw/main/ofl
 [ -s "$FONTS/Onest.ttf" ] || curl -sSfL -o "$FONTS/Onest.ttf" "$GF/onest/Onest%5Bwght%5D.ttf" || echo "!! Onest не скачался"
 mkdir -p "$APP/Contents/Resources/Fonts"
 cp "$FONTS"/*.ttf "$FONTS"/OFL-FONTS.txt "$APP/Contents/Resources/Fonts/" 2>/dev/null || true
+cp Support/blocked.html "$APP/Contents/Resources/"
 cp Support/ru.snachaladelo.daemon.plist "$ROOT/Library/LaunchDaemons/"
 cp Support/ru.snachaladelo.app.plist "$ROOT/Library/LaunchAgents/"
 

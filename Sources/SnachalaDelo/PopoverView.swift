@@ -79,7 +79,7 @@ struct PopoverView: View {
                 Spacer()
                 Button("Скрыть значок", action: quit)
                     .buttonStyle(QuietButtonStyle())
-                    .help("Значок пропадёт до следующего входа. Блокировка всё равно работает.")
+                    .help("Значок спрячется. Окно задач всегда открывается из Launchpad, блокировка работает.")
             }
             .padding(.horizontal, 16).padding(.vertical, 11)
             .background(Theme.surface2)
