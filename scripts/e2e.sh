@@ -39,6 +39,8 @@ if [ "$U" != "0" ]; then
 fi
 
 sh build/uninstall.sh
+echo "DNS после удаления:"; networksetup -listallnetworkservices | tail -n +2 | grep -v '^\*' | while read -r svc; do echo "  $svc: $(networksetup -getdnsservers "$svc" | tr '\n' ' ')"; done
+if networksetup -listallnetworkservices | tail -n +2 | grep -v '^\*' | while read -r svc; do networksetup -getdnsservers "$svc"; done | grep -q '^127\.0\.0\.1$'; then echo "FAIL uninstall оставил DNS 127.0.0.1"; RC=1; else echo "PASS uninstall вернул DNS"; fi
 # Всё, что тест создал под root, вернуть пользователю.
 chown -R "$BUILDER" build
 if grep -q "Сначала дело" /private/etc/hosts; then echo "FAIL uninstall оставил hosts"; RC=1; else echo "PASS uninstall"; fi

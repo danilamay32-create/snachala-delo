@@ -39,7 +39,18 @@ def resolves_blocked(host):
 def task(snap, title):
     return next((t for t in snap["tasks"] if t["title"] == title), None)
 
+def dns_settings():
+    out = subprocess.run(["networksetup", "-listallnetworkservices"], capture_output=True, text=True).stdout
+    svcs = [l for l in out.splitlines()[1:] if l and not l.startswith("*")]
+    res = {}
+    for sv in svcs:
+        o = subprocess.run(["networksetup", "-getdnsservers", sv], capture_output=True, text=True).stdout
+        res[sv] = sorted(l.strip() for l in o.splitlines() if l.strip() and " " not in l.strip())
+    return res
+
 now = time.time()
+dns_before = dns_settings()
+print("DNS до теста:", dns_before)
 
 # 1. служба жива
 for _ in range(30):
@@ -64,6 +75,17 @@ res = resolves_blocked("www.youtube.com")
 check("www.youtube.com резолвится в 0.0.0.0", "0.0.0.0" in res, res)
 res = resolves_blocked("www.google.com")
 check("www.google.com резолвится нормально", "0.0.0.0" not in res and "ip_address" in res, res)
+
+# 2б. DNS-фильтр: зеркала по слову
+time.sleep(2)
+d = dns_settings()
+check("DNS переключён на фильтр", d and all(v == ["127.0.0.1"] for v in d.values()), d)
+res = resolves_blocked("lordfilm-proverka-zerkala.net")
+check("зеркало lordfilm-*.net резолвится в 0.0.0.0", "0.0.0.0" in res, res)
+res = resolves_blocked("hd.rezka-mirror.org")
+check("зеркало *rezka* резолвится в 0.0.0.0", "0.0.0.0" in res, res)
+res = resolves_blocked("www.apple.com")
+check("обычный сайт работает через фильтр", "ip_address" in res and "0.0.0.0" not in res, res)
 
 # 3. пустое название и прошедший дедлайн
 check("пустая задача отклонена", call("add", title="  ", date=now + 3600).get("error") is not None)
@@ -93,6 +115,8 @@ r = call("complete", id=t["id"])
 check("после закрытия не блокирует", r["snapshot"]["locked"] is False)
 time.sleep(1)
 check("hosts очищен", "youtube.com" not in hosts())
+time.sleep(1)
+check("DNS вернулся как был", dns_settings() == dns_before, dns_settings())
 p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC"])
 time.sleep(5)
 check("без блокировки плеер работает", p.poll() is None)
