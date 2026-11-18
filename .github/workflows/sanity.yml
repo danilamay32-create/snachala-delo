@@ -14,5 +14,5 @@ jobs:
           swiftc -module-name Shared -emit-module -emit-library -static -o /tmp/t/libShared.a \
             -emit-module-path /tmp/t/Shared.swiftmodule Sources/Shared/*.swift
           swiftc -I /tmp/t -L /tmp/t -lShared -o /tmp/t/rules \
-            Sources/SnachalaDeloDaemon/Store.swift Sources/SnachalaDeloDaemon/HostsBlocker.swift CI/main.swift
+            Sources/SnachalaDeloDaemon/Store.swift Sources/SnachalaDeloDaemon/HostsBlocker.swift Sources/SnachalaDeloDaemon/DNSPacket.swift CI/main.swift
           /tmp/t/rules

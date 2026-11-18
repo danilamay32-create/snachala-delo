@@ -129,7 +129,33 @@ public enum Defaults {
         "rutube.ru", "vkvideo.ru", "twitch.tv", "tiktok.com",
         "hdrezka.ag", "rezka.ag", "hdrezka.me", "hdrezka.co", "hdrezka.website",
         "animego.org", "animego.one", "animego.me",
+        "jut.su", "anilibria.tv", "lostfilm.tv",
+        // Слова: блокируют любой адрес, где они встречаются (все зеркала пиратских кинотеатров).
+        "lordfilm", "lordserial", "lord-film", "rezka", "kinogo", "filmix", "zetflix",
+        "baskino", "seasonvar", "kinokrad", "kinovod", "gidonline", "kinobar",
+        "kinoprosmotr", "hdfilm", "kinozal", "animego", "animevost", "anilibria", "lostfilm",
     ]
+
+    /// Версия списка по умолчанию: при обновлении новые записи добавляются к старым настройкам.
+    public static let sitesVersion = 2
+
+    /// Запись без точки — слово, а не адрес.
+    public static func isKeyword(_ entry: String) -> Bool { !entry.contains(".") }
+
+    /// Заблокирован ли адрес списком: точное совпадение или поддомен, а для слов — вхождение.
+    public static func isBlocked(host raw: String, sites: [String]) -> Bool {
+        var host = raw.lowercased()
+        while host.hasSuffix(".") { host.removeLast() }
+        guard !host.isEmpty else { return false }
+        for e in sites {
+            if isKeyword(e) {
+                if host.contains(e) { return true }
+            } else if host == e || host.hasSuffix("." + e) {
+                return true
+            }
+        }
+        return false
+    }
 
     public static let apps: [BlockedApp] = [
         BlockedApp(bundleID: "com.apple.TV", name: "Apple TV"),
@@ -139,15 +165,17 @@ public enum Defaults {
         BlockedApp(bundleID: "com.valvesoftware.steam", name: "Steam"),
     ]
 
-    /// Чистит ввод: «https://www.YouTube.com/watch?v=1» → «youtube.com».
+    /// Чистит ввод: «https://www.YouTube.com/watch?v=1» → «youtube.com», « LordFilm » → «lordfilm».
     public static func normalizeSite(_ raw: String) -> String? {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let r = s.range(of: "://") { s = String(s[r.upperBound...]) }
         if let i = s.firstIndex(where: { $0 == "/" || $0 == "?" || $0 == "#" || $0 == ":" }) { s = String(s[..<i]) }
         if s.hasPrefix("www.") { s.removeFirst(4) }
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789.-")
-        guard s.contains("."), !s.hasPrefix("."), !s.hasSuffix("."),
+        guard !s.hasPrefix("."), !s.hasSuffix("."), !s.hasPrefix("-"),
               s.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return nil }
+        // Слово: не короче 4 символов, чтобы случайно не закрыть полинтернета.
+        if isKeyword(s) { return s.count >= 4 ? s : nil }
         return s
     }
 }

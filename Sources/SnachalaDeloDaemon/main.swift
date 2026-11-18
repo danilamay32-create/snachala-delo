@@ -3,11 +3,16 @@ import Darwin
 import Shared
 
 // Фоновая служба «Сначала дело». Запускается launchd от root при старте Мака.
-// Держит задачи, проверяет правила, правит /etc/hosts и закрывает плееры.
+// Держит задачи, проверяет правила, правит /etc/hosts, фильтрует DNS и закрывает плееры.
 
 if CommandLine.arguments.contains("--cleanup") {
-    // Вызывается из скрипта удаления: снять блокировку сайтов.
+    // Вызывается из скрипта удаления: снять блокировку сайтов и вернуть прежний DNS.
     HostsBlocker.apply(sites: nil)
+    let s = Store()
+    if let b = s.state.dnsBackup {
+        DNSSwitch.disable(backup: b)
+        s.setDNSBackup(nil)
+    }
     exit(0)
 }
 
@@ -21,6 +26,8 @@ signal(SIGPIPE, SIG_IGN)
 let queue = DispatchQueue(label: "ru.snachaladelo.daemon")
 let store = Store()
 let killer = AppKiller()
+let dns = DNSFilter()
+let dnsReady = dns.start()
 
 // MARK: Enforcement loop
 
@@ -36,6 +43,7 @@ func enforce(force: Bool = false) {
     // Файл hosts проверяем раз в 10 секунд (вдруг его поправили руками) или сразу при изменении.
     if force || locked != lastLocked || sites != lastSites || now.timeIntervalSince(lastHostsCheck) > 10 {
         HostsBlocker.apply(sites: locked ? sites : nil)
+        applyDNS(locked: locked, sites: sites)
         lastHostsCheck = now
         lastLocked = locked
         lastSites = sites
@@ -44,6 +52,32 @@ func enforce(force: Bool = false) {
         killer.enforce(blocked: Set(store.state.apps.map(\.bundleID)))
     }
 }
+
+/// Пока блокирует — DNS Мака смотрит на наш фильтр; иначе — прежние настройки.
+func applyDNS(locked: Bool, sites: [String]) {
+    dns.sites = sites
+    if locked && dnsReady {
+        DNSSwitch.enable(backup: store.state.dnsBackup) { store.setDNSBackup($0) }
+        dns.backupServers = (store.state.dnsBackup ?? [:]).values.flatMap { $0 }
+    } else if let b = store.state.dnsBackup {
+        DNSSwitch.disable(backup: b)
+        store.setDNSBackup(nil)
+    }
+}
+
+// Если службу останавливают (выключение Мака, удаление, обновление) — вернуть DNS,
+// чтобы интернет не остался без адресов. При старте фильтр включится снова.
+signal(SIGTERM, SIG_IGN)
+let termSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: queue)
+termSource.setEventHandler {
+    if let b = store.state.dnsBackup {
+        DNSSwitch.disable(backup: b)
+        store.setDNSBackup(nil)
+    }
+    log("stopped")
+    exit(0)
+}
+termSource.resume()
 
 let timer = DispatchSource.makeTimerSource(queue: queue)
 timer.schedule(deadline: .now(), repeating: .seconds(2))

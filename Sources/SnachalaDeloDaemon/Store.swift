@@ -7,6 +7,10 @@ struct State: Codable {
     var apps: [BlockedApp] = Defaults.apps
     var passUntil: Date?
     var lastPassDay: String?
+    /// Какой версии список сайтов по умолчанию уже добавлен (nil — самая первая).
+    var sitesVersion: Int?
+    /// DNS-настройки сетевых служб до включения фильтра: имя службы → серверы ([] — автоматически).
+    var dnsBackup: [String: [String]]?
 }
 
 /// Хранит задачи и проверяет все правила. Все вызовы идут с одной последовательной очереди.
@@ -21,9 +25,24 @@ final class Store {
     // MARK: Persistence
 
     private func load() {
-        guard let data = fm.contents(atPath: Paths.stateFile),
-              let s = try? IPC.decoder.decode(State.self, from: data) else { return }
-        state = s
+        if let data = fm.contents(atPath: Paths.stateFile),
+           let s = try? IPC.decoder.decode(State.self, from: data) {
+            state = s
+        }
+        migrateDefaults()
+    }
+
+    /// Добавляет новые записи списка по умолчанию, ничего не удаляя из настроек.
+    func migrateDefaults() {
+        guard (state.sitesVersion ?? 1) < Defaults.sitesVersion else { return }
+        for s in Defaults.sites where !state.sites.contains(s) { state.sites.append(s) }
+        state.sitesVersion = Defaults.sitesVersion
+        save()
+    }
+
+    func setDNSBackup(_ b: [String: [String]]?) {
+        state.dnsBackup = b
+        save()
     }
 
     func save() {

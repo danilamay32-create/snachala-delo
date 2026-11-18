@@ -66,5 +66,38 @@ check("hosts: повторно не дублирует", (try! String(contentsOf
 HostsBlocker.apply(sites: nil, path: tmp)
 check("hosts: снятие возвращает как было", (try! String(contentsOfFile: tmp, encoding: .utf8)) == original)
 
+// слова и зеркала
+let sites = ["youtube.com", "lordfilm", "rezka"]
+check("зеркало lordfilm по слову", Defaults.isBlocked(host: "lordfilm-2026.xyz", sites: sites))
+check("поддомен зеркала", Defaults.isBlocked(host: "www.Hd.LordFilm.cc.", sites: sites))
+check("hdrezka по слову rezka", Defaults.isBlocked(host: "hdrezka-home.tv", sites: sites))
+check("поддомен youtube", Defaults.isBlocked(host: "m.youtube.com", sites: sites))
+check("google не задет", !Defaults.isBlocked(host: "www.google.com", sites: sites))
+check("похожий домен не задет", !Defaults.isBlocked(host: "notyoutube.com", sites: sites))
+check("слово из ввода", Defaults.normalizeSite("  LordFilm ") == "lordfilm")
+check("короткое слово отклонено", Defaults.normalizeSite("kin") == nil)
+check("в hosts слова не попадают", !HostsBlocker.expand(["lordfilm", "ivi.ru"]).contains("lordfilm"))
+check("список по умолчанию содержит lordfilm", Defaults.sites.contains("lordfilm"))
+
+// DNS-пакеты
+let qA = DNSQuery.make(name: "LordFilm-Zerkalo.com", qtype: 1, id: 0xBEEF)
+let parsed = DNSQuery(qA)
+check("разбор запроса", parsed?.name == "lordfilm-zerkalo.com" && parsed?.qtype == 1 && parsed?.id == 0xBEEF)
+let respA = [UInt8](parsed!.blockedResponse())
+check("ответ: тот же id и флаг ответа", respA[0] == 0xBE && respA[1] == 0xEF && respA[2] & 0x80 != 0)
+check("ответ: одна запись A 0.0.0.0", respA[7] == 1 && Array(respA.suffix(4)) == [0, 0, 0, 0] && respA.count == qA.count + 16)
+let qAAAA = DNSQuery(DNSQuery.make(name: "rezka.ag", qtype: 28))!
+let respAAAA = [UInt8](qAAAA.blockedResponse())
+check("ответ AAAA: ::", respAAAA[7] == 1 && respAAAA.suffix(16).allSatisfy { $0 == 0 })
+let qHTTPS = DNSQuery(DNSQuery.make(name: "rezka.ag", qtype: 65))!
+check("ответ HTTPS-записи пустой", [UInt8](qHTTPS.blockedResponse())[7] == 0)
+check("мусор не разбирается", DNSQuery(Data([1, 2, 3])) == nil)
+
+// обновление старых настроек: новые слова добавляются, свои сайты остаются
+let migr = Store()
+migr.handle(Request(.addSite, site: "my-serial.ru"), now: now)
+check("после миграции есть lordfilm и свой сайт",
+      migr.state.sites.contains("lordfilm") && migr.state.sites.contains("my-serial.ru"))
+
 print(failed.isEmpty ? "ALL PASSED" : "FAILED: \(failed)")
 exit(failed.isEmpty ? 0 : 1)

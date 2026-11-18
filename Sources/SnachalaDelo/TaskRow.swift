@@ -11,28 +11,28 @@ struct TaskRow: View {
 
     var body: some View {
         let now = model.now
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
                 HoldCircle(done: task.isDone) { model.complete(task) }
                     .disabled(task.isDone)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(task.title)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .strikethrough(task.isDone)
-                        .foregroundColor(task.isDone ? .secondary : .primary)
+                        .font(Theme.body(14, .medium))
+                        .strikethrough(task.isDone, color: Theme.fg3)
+                        .foregroundColor(task.isDone ? Theme.fg3 : Theme.fg)
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         tag(now)
-                        Text(meta(now)).font(.caption).foregroundColor(metaColor(now))
+                        Text(meta(now)).font(metaFont(now)).foregroundColor(metaColor(now))
                     }
                 }
                 Spacer(minLength: 4)
                 if let d = task.deleteAt {
-                    VStack(alignment: .trailing, spacing: 0) {
+                    VStack(alignment: .trailing, spacing: 1) {
                         Text("удалится через \(Fmt.countdown(d, now: now))")
-                            .font(.caption.monospacedDigit()).foregroundColor(Palette.warn)
+                            .font(Theme.body(12, .semibold).monospacedDigit()).foregroundColor(Theme.warn)
                         Button("Отменить") { model.cancelDelete(task) }
-                            .buttonStyle(.borderless).font(.caption)
+                            .buttonStyle(QuietButtonStyle())
                     }
                 } else {
                     Menu {
@@ -50,49 +50,52 @@ struct TaskRow: View {
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
                     .frame(width: 22)
-                    .opacity(hover ? 1 : 0.35)
+                    .opacity(hover ? 1 : 0.3)
                 }
             }
             if rescheduling { rescheduleBox }
         }
-        .padding(.vertical, 7).padding(.horizontal, 6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(hover ? Color.secondary.opacity(0.08) : .clear))
+        .padding(.vertical, 10).padding(.horizontal, 8)
+        .background(RoundedRectangle(cornerRadius: 10).fill(hover ? Theme.surface2 : .clear))
         .onHover { hover = $0 }
     }
 
     private var limit: Date { Date().addingTimeInterval(Rules.laterRescheduleLimit) }
 
     private var rescheduleBox: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             if task.rescheduleCount >= 1 {
                 Text("Эту задачу уже переносили. Теперь можно отодвинуть не дальше чем на сутки.")
-                    .font(.caption).foregroundColor(Palette.warn).fixedSize(horizontal: false, vertical: true)
+                    .font(Theme.body(12.5)).foregroundColor(Theme.warn).fixedSize(horizontal: false, vertical: true)
                 DatePicker("", selection: $newDate, in: Date()...limit, displayedComponents: [.date, .hourAndMinute])
                     .labelsHidden().datePickerStyle(.field).environment(\.locale, Fmt.ru)
             } else {
                 Text("Перенести можно один раз. Потом только на сутки.")
-                    .font(.caption).foregroundColor(.secondary)
+                    .font(Theme.body(12.5)).foregroundColor(Theme.fg3)
                 DatePicker("", selection: $newDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
                     .labelsHidden().datePickerStyle(.field).environment(\.locale, Fmt.ru)
             }
-            HStack {
+            HStack(spacing: 12) {
                 Button("Перенести") { model.reschedule(task, to: newDate); rescheduling = false }
-                Button("Отмена") { rescheduling = false }.buttonStyle(.borderless)
+                    .buttonStyle(InkButtonStyle())
+                Button("Отмена") { rescheduling = false }
+                    .buttonStyle(QuietButtonStyle())
             }
-            .font(.callout)
         }
-        .padding(.leading, 34)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.surface2))
+        .padding(.leading, 42)
     }
 
     @ViewBuilder private func tag(_ now: Date) -> some View {
         if task.isDone {
-            Tag(text: "сделано", fg: Palette.free, bg: Palette.free.opacity(0.15))
+            Tag(text: "сделано", fg: Theme.free, bg: Theme.freeSoft)
         } else if task.isOverdue(at: now) {
-            Tag(text: "просрочено", fg: .white, bg: Palette.lock)
+            Tag(text: "просрочено", fg: .white, bg: Theme.lock)
         } else if task.isLocking(at: now) {
-            Tag(text: "блокирует", fg: Palette.lock, bg: Palette.lock.opacity(0.15))
+            Tag(text: "блокирует", fg: Theme.lock, bg: Theme.lockSoft)
         } else {
-            Tag(text: "ждёт", fg: .secondary, bg: Color.secondary.opacity(0.12))
+            Tag(text: "ждёт", fg: Theme.fg3, bg: Theme.surface2, border: Theme.line)
         }
     }
 
@@ -102,10 +105,17 @@ struct TaskRow: View {
     }
 
     private func metaColor(_ now: Date) -> Color {
-        if task.isDone { return .secondary }
-        if task.isOverdue(at: now) { return Palette.lock }
-        if task.deadline.timeIntervalSince(now) < 3 * 3600 { return Palette.warn }
-        return .secondary
+        if task.isDone { return Theme.fg3 }
+        if task.isOverdue(at: now) { return Theme.lock }
+        if task.deadline.timeIntervalSince(now) < 3 * 3600 { return Theme.warn }
+        return Theme.fg3
+    }
+
+    private func metaFont(_ now: Date) -> Font {
+        if task.isDone { return Theme.body(12.5) }
+        if task.isOverdue(at: now) { return Theme.body(12.5, .bold) }
+        if task.deadline.timeIntervalSince(now) < 3 * 3600 { return Theme.body(12.5, .semibold) }
+        return Theme.body(12.5)
     }
 }
 
@@ -113,12 +123,15 @@ struct Tag: View {
     var text: String
     var fg: Color
     var bg: Color
+    var border: Color? = nil
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 9.5, weight: .bold))
-            .padding(.horizontal, 6).padding(.vertical, 1.5)
+            .font(Theme.body(10.5, .bold))
+            .tracking(0.4)
+            .padding(.horizontal, 7).padding(.vertical, 1.5)
             .foregroundColor(fg)
-            .background(RoundedRectangle(cornerRadius: 4).fill(bg))
+            .background(RoundedRectangle(cornerRadius: 5).fill(bg))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(border ?? .clear))
     }
 }
 
@@ -131,16 +144,16 @@ struct HoldCircle: View {
 
     var body: some View {
         ZStack {
-            Circle().stroke(Color.secondary.opacity(0.35), lineWidth: 2)
+            Circle().stroke(Theme.line, lineWidth: 2.5)
             Circle()
                 .trim(from: 0, to: done || fired ? 1 : progress)
-                .stroke(Palette.free, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .stroke(Theme.free, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             if done || fired {
-                Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundColor(Palette.free)
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundColor(Theme.free)
             }
         }
-        .frame(width: 24, height: 24)
+        .frame(width: 30, height: 30)
         .contentShape(Circle())
         // Вариант с pressing: работает на macOS 12.
         .onLongPressGesture(minimumDuration: 2, maximumDistance: 40, pressing: { pressing in
@@ -154,6 +167,6 @@ struct HoldCircle: View {
             fired = true
             onComplete()
         })
-        .help(done ? "Сделано" : "Зажми на 2 секунды, чтобы закрыть")
+        .help(done ? "Сделано" : "Зажми, чтобы закрыть задачу")
     }
 }

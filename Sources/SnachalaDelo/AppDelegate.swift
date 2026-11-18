@@ -82,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 quit: { NSApp.terminate(nil) }
             )))
             w.title = "Сначала дело"
+            w.backgroundColor = NSColor(Theme.surface)
             w.styleMask = [.titled, .closable, .miniaturizable]
             w.isReleasedWhenClosed = false
             w.center()
@@ -98,9 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem?.button else { return }
         let (symbol, color): (String, NSColor?) = {
             switch model.status {
-            case .locked: return ("lock.fill", .systemRed)
-            case .pass: return ("cup.and.saucer.fill", .systemOrange)
-            case .free: return ("checkmark.circle.fill", .systemGreen)
+            case .locked: return ("lock.fill", Theme.lockNS)
+            case .pass: return ("cup.and.saucer.fill", Theme.warnNS)
+            case .free: return ("checkmark.circle.fill", Theme.freeNS)
             case .offline: return ("exclamationmark.triangle", nil)
             }
         }()

@@ -9,7 +9,8 @@ enum HostsBlocker {
     static func expand(_ sites: [String]) -> [String] {
         var out: [String] = []
         var seen = Set<String>()
-        for s in sites {
+        // Слова в hosts не запишешь — их ловит DNSFilter.
+        for s in sites where !Defaults.isKeyword(s) {
             for h in [s, "www." + s, "m." + s] where seen.insert(h).inserted {
                 out.append(h)
             }

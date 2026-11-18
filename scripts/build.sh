@@ -23,6 +23,15 @@ lipo -create "$(bin arm64 SnachalaDelo)" "$(bin x86_64 SnachalaDelo)" -output "$
 lipo -create "$(bin arm64 SnachalaDeloDaemon)" "$(bin x86_64 SnachalaDeloDaemon)" \
      -output "$ROOT/Library/PrivilegedHelperTools/ru.snachaladelo.daemon"
 sed "s/__VERSION__/$VERSION/g" Support/Info.plist > "$APP/Contents/Info.plist"
+
+# Шрифты с визитки (Unbounded, Onest; лицензия OFL). Без них приложение возьмёт системные.
+FONTS=Support/Fonts
+mkdir -p "$FONTS"
+GF=https://github.com/google/fonts/raw/main/ofl
+[ -s "$FONTS/Unbounded.ttf" ] || curl -sSfL -o "$FONTS/Unbounded.ttf" "$GF/unbounded/Unbounded%5Bwght%5D.ttf" || echo "!! Unbounded не скачался"
+[ -s "$FONTS/Onest.ttf" ] || curl -sSfL -o "$FONTS/Onest.ttf" "$GF/onest/Onest%5Bwght%5D.ttf" || echo "!! Onest не скачался"
+mkdir -p "$APP/Contents/Resources/Fonts"
+cp "$FONTS"/*.ttf "$FONTS"/OFL-FONTS.txt "$APP/Contents/Resources/Fonts/" 2>/dev/null || true
 cp Support/ru.snachaladelo.daemon.plist "$ROOT/Library/LaunchDaemons/"
 cp Support/ru.snachaladelo.app.plist "$ROOT/Library/LaunchAgents/"
 
