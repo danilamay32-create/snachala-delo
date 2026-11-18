@@ -1,0 +1,7 @@
+name: sanity
+on: [push, workflow_dispatch]
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo runners-ok
