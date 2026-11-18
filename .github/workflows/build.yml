@@ -1,0 +1,36 @@
+name: build-and-test
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          sw_vers
+          swift --version
+      - name: Build pkg
+        run: ./scripts/build.sh
+      - name: Upload pkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnachalaDelo-pkg
+          path: |
+            build/*.pkg
+            build/uninstall.sh
+      - name: End-to-end test (install, block, unblock, uninstall)
+        run: sudo ./scripts/e2e.sh
+      - name: Daemon log
+        if: always()
+        run: sudo cat /var/log/snachaladelo.log || true
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: build/shots/
+          if-no-files-found: ignore

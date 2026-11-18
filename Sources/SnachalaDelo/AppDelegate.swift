@@ -43,6 +43,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(appLaunched(_:)),
             name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+
+        // Для скриншотов в CI.
+        let args = CommandLine.arguments
+        if args.contains("--open-window") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.togglePopover() }
+        } else if args.contains("--open-settings") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
+        }
     }
 
     // MARK: Menu bar
