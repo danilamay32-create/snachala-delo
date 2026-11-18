@@ -11,13 +11,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bag = Set<AnyCancellable>()
     private var lastAlert: [String: Date] = [:]
 
+    private var mainWindow: NSWindow?
+    static let showNote = Notification.Name("ru.snachaladelo.show")
+
     func applicationDidFinishLaunching(_ note: Notification) {
-        // Второй экземпляр не нужен.
+        // Второй экземпляр не нужен: просим первый показать окно и выходим.
         let me = Bundle.main.bundleIdentifier ?? ""
         if NSRunningApplication.runningApplications(withBundleIdentifier: me).count > 1 {
+            DistributedNotificationCenter.default().postNotificationName(
+                AppDelegate.showNote, object: nil, userInfo: nil, deliverImmediately: true)
             NSApp.terminate(nil)
             return
         }
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(showRequested), name: AppDelegate.showNote, object: nil)
 
         NSApp.mainMenu = makeMainMenu()
 
@@ -50,7 +57,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.togglePopover() }
         } else if args.contains("--open-settings") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.openSettings() }
+        } else if !args.contains("--background") {
+            // Запустили руками (Программы, Launchpad, Spotlight) — показать окно,
+            // даже если значок в строке меню спрятался за «чёлкой».
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.openMainWindow() }
         }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openMainWindow()
+        return false
+    }
+
+    @objc private func showRequested() {
+        openMainWindow()
+    }
+
+    func openMainWindow() {
+        popover.performClose(nil)
+        if mainWindow == nil {
+            let w = NSWindow(contentViewController: NSHostingController(rootView: PopoverView(
+                model: model,
+                openSettings: { [weak self] in self?.openSettings() },
+                quit: { NSApp.terminate(nil) }
+            )))
+            w.title = "Сначала дело"
+            w.styleMask = [.titled, .closable, .miniaturizable]
+            w.isReleasedWhenClosed = false
+            w.center()
+            mainWindow = w
+        }
+        model.refresh()
+        NSApp.activate(ignoringOtherApps: true)
+        mainWindow?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: Menu bar
@@ -128,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "Открыть задачи")
         alert.addButton(withTitle: "Ладно")
         NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn { togglePopover() }
+        if alert.runModal() == .alertFirstButtonReturn { openMainWindow() }
     }
 
     // MARK: Menu (нужно, чтобы работали ⌘C / ⌘V в полях ввода)

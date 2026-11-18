@@ -4,7 +4,7 @@
 <dict>
 	<key>Label</key><string>ru.snachaladelo.app</string>
 	<key>ProgramArguments</key>
-	<array><string>/Applications/Сначала дело.app/Contents/MacOS/SnachalaDelo</string></array>
+	<array><string>/Applications/Сначала дело.app/Contents/MacOS/SnachalaDelo</string><string>--background</string></array>
 	<key>RunAtLoad</key><true/>
 	<key>KeepAlive</key>
 	<dict><key>SuccessfulExit</key><false/></dict>
