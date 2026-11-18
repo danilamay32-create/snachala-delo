@@ -1,5 +1,6 @@
 """Сквозной тест установленной службы через её сокет. Запускать от root."""
-import json, os, socket, subprocess, sys, time
+import functools, json, os, socket, subprocess, sys, time
+print = functools.partial(print, flush=True)
 
 SOCK = "/var/run/ru.snachaladelo.sock"
 failures = []
@@ -78,14 +79,20 @@ check("добавление сайта с нормализацией", "example-
 # 5. запрещённое приложение закрывается
 app = "/tmp/FakeVLC.app"
 os.makedirs(app + "/Contents/MacOS", exist_ok=True)
-subprocess.run(["cp", "/bin/sleep", app + "/Contents/MacOS/FakeVLC"], check=True)
+with open("/tmp/fakevlc.c", "w") as f:
+    f.write("#include <unistd.h>\nint main(void){ sleep(300); return 0; }\n")
+subprocess.run(["cc", "-o", app + "/Contents/MacOS/FakeVLC", "/tmp/fakevlc.c"], check=True)
 with open(app + "/Contents/Info.plist", "w") as f:
     f.write('<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>'
             '<key>CFBundleIdentifier</key><string>org.videolan.vlc</string>'
             '<key>CFBundleExecutable</key><string>FakeVLC</string></dict></plist>')
-p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC", "300"])
+subprocess.run(["codesign", "--force", "--sign", "-", app], check=True)
+log_before = open("/var/log/snachaladelo.log").read().count("closed: FakeVLC.app")
+p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC"])
 time.sleep(7)
-check("плеер закрыт службой", p.poll() is not None)
+log_after = open("/var/log/snachaladelo.log").read().count("closed: FakeVLC.app")
+check("плеер закрыт службой", p.poll() is not None and log_after > log_before,
+      f"exit={p.poll()} log {log_before}->{log_after}")
 
 # 6. закрытие задачи снимает блокировку
 t = task(call("state")["snapshot"], "Реферат")
@@ -93,7 +100,7 @@ r = call("complete", id=t["id"])
 check("после закрытия не блокирует", r["snapshot"]["locked"] is False)
 time.sleep(1)
 check("hosts очищен", "youtube.com" not in hosts())
-p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC", "300"])
+p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC"])
 time.sleep(5)
 check("без блокировки плеер работает", p.poll() is None)
 p.kill()
