@@ -39,5 +39,7 @@ if [ "$U" != "0" ]; then
 fi
 
 sh build/uninstall.sh
+# Всё, что тест создал под root, вернуть пользователю.
+chown -R "$BUILDER" build
 if grep -q "Сначала дело" /private/etc/hosts; then echo "FAIL uninstall оставил hosts"; RC=1; else echo "PASS uninstall"; fi
 exit $RC

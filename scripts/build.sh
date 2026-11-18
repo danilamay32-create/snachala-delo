@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 VERSION="${VERSION:-0.1.0}"
 APP_NAME="Сначала дело.app"
 OUT=build
-rm -rf "$OUT"; mkdir -p "$OUT"
+rm -rf "$OUT/root" "$OUT/scripts" "$OUT"/*.pkg "$OUT/components.plist"; mkdir -p "$OUT"
 
 for arch in arm64 x86_64; do
   echo "==> swift build ($arch)"
