@@ -13,7 +13,7 @@ for arch in arm64 x86_64; do
   swift build -c release --triple "$arch-apple-macosx12.0" --scratch-path ".build/$arch"
 done
 
-bin() { echo ".build/$1/$1-apple-macosx12.0/release/$2"; }
+bin() { echo "$(swift build -c release --triple "$1-apple-macosx12.0" --scratch-path ".build/$1" --show-bin-path)/$2"; }
 ROOT="$OUT/root"
 APP="$ROOT/Applications/$APP_NAME"
 mkdir -p "$APP/Contents/MacOS" "$ROOT/Library/PrivilegedHelperTools" \
