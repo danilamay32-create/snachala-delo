@@ -1,6 +1,6 @@
 name: build-and-test
+# Маковские раннеры этому аккаунту пока не выдаются, поэтому только ручной запуск.
 on:
-  push:
   workflow_dispatch:
 
 jobs:
