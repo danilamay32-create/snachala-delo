@@ -6,7 +6,21 @@ PKG=$(ls build/*.pkg | head -1)
 installer -pkg "$PKG" -target / || exit 1
 sleep 5
 launchctl print system/ru.snachaladelo.daemon | head -20
-python3 scripts/e2e.py; RC=$?
+# Пустышка с bundle id VLC, собранная от обычного пользователя.
+BUILDER="${SUDO_USER:-$(stat -f %Su /dev/console)}"
+FAKE="$PWD/build/FakeVLC.app"
+rm -rf "$FAKE"
+sudo -u "$BUILDER" mkdir -p "$FAKE/Contents/MacOS"
+printf '#include <unistd.h>\nint main(void){ sleep(300); return 0; }\n' > /tmp/fakevlc.c
+sudo -u "$BUILDER" cc -o "$FAKE/Contents/MacOS/FakeVLC" /tmp/fakevlc.c
+cat > "$FAKE/Contents/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>org.videolan.vlc</string>
+<key>CFBundleExecutable</key><string>FakeVLC</string></dict></plist>
+PLIST
+codesign --force --sign - "$FAKE"
+
+FAKE_APP="$FAKE" python3 scripts/e2e.py; RC=$?
 
 # Скриншоты интерфейса (не влияют на результат).
 mkdir -p build/shots

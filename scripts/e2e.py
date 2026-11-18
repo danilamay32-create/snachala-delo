@@ -77,16 +77,9 @@ r = call("addSite", site="https://www.Example-Serial.com/watch?x=1")
 check("добавление сайта с нормализацией", "example-serial.com" in r["snapshot"]["sites"], r)
 
 # 5. запрещённое приложение закрывается
-app = "/tmp/FakeVLC.app"
-os.makedirs(app + "/Contents/MacOS", exist_ok=True)
-with open("/tmp/fakevlc.c", "w") as f:
-    f.write("#include <unistd.h>\nint main(void){ sleep(300); return 0; }\n")
-subprocess.run(["cc", "-o", app + "/Contents/MacOS/FakeVLC", "/tmp/fakevlc.c"], check=True)
-with open(app + "/Contents/Info.plist", "w") as f:
-    f.write('<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>'
-            '<key>CFBundleIdentifier</key><string>org.videolan.vlc</string>'
-            '<key>CFBundleExecutable</key><string>FakeVLC</string></dict></plist>')
-subprocess.run(["codesign", "--force", "--sign", "-", app], check=True)
+# Пустышку плеера собирает e2e.sh от обычного пользователя (под root линковка ломается).
+app = os.environ.get("FAKE_APP", "build/FakeVLC.app")
+check("пустышка плеера собрана", os.path.exists(app + "/Contents/MacOS/FakeVLC"), app)
 log_before = open("/var/log/snachaladelo.log").read().count("closed: FakeVLC.app")
 p = subprocess.Popen([app + "/Contents/MacOS/FakeVLC"])
 time.sleep(7)
