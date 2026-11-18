@@ -1,0 +1,23 @@
+#!/bin/sh
+# Запускается установщиком от root после копирования файлов.
+DAEMON=/Library/LaunchDaemons/ru.snachaladelo.daemon.plist
+AGENT=/Library/LaunchAgents/ru.snachaladelo.app.plist
+HELPER=/Library/PrivilegedHelperTools/ru.snachaladelo.daemon
+
+chown root:wheel "$DAEMON" "$AGENT" "$HELPER"
+chmod 644 "$DAEMON" "$AGENT"
+chmod 755 "$HELPER"
+
+launchctl bootout system/ru.snachaladelo.daemon 2>/dev/null || true
+launchctl bootstrap system "$DAEMON"
+launchctl enable system/ru.snachaladelo.daemon
+launchctl kickstart -k system/ru.snachaladelo.daemon 2>/dev/null || true
+
+# Запустить значок в строке меню у того, кто сейчас за Маком.
+UID_NOW=$(stat -f %u /dev/console)
+if [ -n "$UID_NOW" ] && [ "$UID_NOW" != "0" ]; then
+  launchctl bootout "gui/$UID_NOW/ru.snachaladelo.app" 2>/dev/null || true
+  launchctl bootstrap "gui/$UID_NOW" "$AGENT" 2>/dev/null || true
+  launchctl kickstart "gui/$UID_NOW/ru.snachaladelo.app" 2>/dev/null || true
+fi
+exit 0

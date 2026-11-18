@@ -1,0 +1,6 @@
+#!/bin/sh
+# Перед обновлением остановить старые версии.
+UID_NOW=$(stat -f %u /dev/console)
+[ -n "$UID_NOW" ] && [ "$UID_NOW" != "0" ] && launchctl bootout "gui/$UID_NOW/ru.snachaladelo.app" 2>/dev/null
+pkill -x SnachalaDelo 2>/dev/null
+exit 0

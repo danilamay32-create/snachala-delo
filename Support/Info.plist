@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key><string>ru.snachaladelo.app</string>
+	<key>CFBundleName</key><string>Сначала дело</string>
+	<key>CFBundleDisplayName</key><string>Сначала дело</string>
+	<key>CFBundleExecutable</key><string>SnachalaDelo</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>__VERSION__</string>
+	<key>CFBundleVersion</key><string>__VERSION__</string>
+	<key>CFBundleDevelopmentRegion</key><string>ru</string>
+	<key>LSMinimumSystemVersion</key><string>12.0</string>
+	<key>LSUIElement</key><true/>
+	<key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
