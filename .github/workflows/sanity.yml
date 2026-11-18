@@ -1,7 +1,18 @@
-name: sanity
+name: linux-checks
 on: [push, workflow_dispatch]
 jobs:
   linux:
     runs-on: ubuntu-latest
+    container: swift:6.0
     steps:
-      - run: echo runners-ok
+      - uses: actions/checkout@v4
+      - name: Parse all Swift sources
+        run: swiftc -parse $(find Sources -name '*.swift')
+      - name: Rules + hosts test
+        run: |
+          mkdir -p /tmp/t
+          swiftc -module-name Shared -emit-module -emit-library -static -o /tmp/t/libShared.a \
+            -emit-module-path /tmp/t/Shared.swiftmodule Sources/Shared/*.swift
+          swiftc -I /tmp/t -L /tmp/t -lShared -o /tmp/t/rules \
+            Sources/SnachalaDeloDaemon/Store.swift Sources/SnachalaDeloDaemon/HostsBlocker.swift CI/linux_rules_test.swift
+          /tmp/t/rules
