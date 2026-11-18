@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Parse all Swift sources
-        run: swiftc -parse $(find Sources -name '*.swift')
+        run: for d in Sources/*/; do echo "== $d"; swiftc -parse "$d"*.swift || exit 1; done
       - name: Rules + hosts test
         run: |
           mkdir -p /tmp/t
